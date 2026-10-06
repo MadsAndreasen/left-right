@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Venstre / Højre</title>
+  <style>
+    :root {
+      --bg: #f6f5f2;
+      --fg: #1d1d1f;
+      --muted: #6b6b70;
+      --accent: #c8102e;
+      --card: #ffffff;
+      --border: #e2e0db;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #141416;
+        --fg: #f2f2f4;
+        --muted: #9a9aa2;
+        --accent: #ff4d5e;
+        --card: #1e1e22;
+        --border: #2e2e34;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      padding: 16px;
+    }
+    main {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    h1 { margin: 0 0 4px; font-size: 1.5rem; }
+    .sub { margin: 0 0 28px; color: var(--muted); font-size: 0.95rem; }
+    .timer {
+      font-size: 4rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .command {
+      height: 2.5rem;
+      margin: 20px 0 28px;
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    button {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border: 0;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+    button.stop { background: var(--muted); }
+    .stats { margin-top: 16px; color: var(--muted); font-size: 0.9rem; min-height: 1.2em; }
+    .warn { margin-top: 16px; color: var(--accent); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Venstre / Højre</h1>
+    <p class="sub">Tilfældige kommandoer i 60 sekunder</p>
+    <div class="timer" id="timer">60</div>
+    <div class="command" id="command"></div>
+    <button id="toggle">Start</button>
+    <div class="stats" id="stats"></div>
+    <div class="warn" id="warn" hidden></div>
+  </main>
+
+  <script>
+    const ROUND_SECONDS = 60;
+    // Pause between the direction and "tilbage" (ms)
+    const TO_BACK_MIN = 800, TO_BACK_MAX = 2000;
+    // Pause between "tilbage" and the next direction (ms)
+    const TO_NEXT_MIN = 1200, TO_NEXT_MAX = 3200;
+
+    const timerEl = document.getElementById("timer");
+    const commandEl = document.getElementById("command");
+    const button = document.getElementById("toggle");
+    const statsEl = document.getElementById("stats");
+    const warnEl = document.getElementById("warn");
+
+    let running = false;
+    let session = 0; // bumps on each start so a stale loop from a previous round exits
+    let endTime = 0;
+    let tickHandle = null;
+    let waitHandle = null;
+    let counts = { venstre: 0, højre: 0 };
+    let danishVoice = null;
+
+    function pickVoice() {
+      const voices = speechSynthesis.getVoices();
+      danishVoice = voices.find(v => v.lang.toLowerCase().replace("_", "-").startsWith("da")) || null;
+      if (voices.length && !danishVoice) {
+        warnEl.hidden = false;
+        warnEl.textContent = "Ingen dansk stemme fundet på denne enhed – udtalen kan lyde forkert.";
+      }
+    }
+
+    if (!("speechSynthesis" in window)) {
+      warnEl.hidden = false;
+      warnEl.textContent = "Din browser understøtter ikke tale.";
+      button.disabled = true;
+    } else {
+      pickVoice();
+      speechSynthesis.addEventListener("voiceschanged", pickVoice);
+    }
+
+    const rand = (min, max) => min + Math.random() * (max - min);
+
+    function wait(ms) {
+      return new Promise(resolve => { waitHandle = setTimeout(resolve, ms); });
+    }
+
+    function say(text) {
+      return new Promise(resolve => {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "da-DK";
+        if (danishVoice) u.voice = danishVoice;
+        u.rate = 1;
+        u.onend = u.onerror = resolve;
+        speechSynthesis.speak(u);
+      });
+    }
+
+    const timeLeft = () => endTime - Date.now();
+
+    async function loop() {
+      const id = session;
+      const alive = () => running && id === session;
+      while (alive()) {
+        const dir = Math.random() < 0.5 ? "venstre" : "højre";
+        commandEl.textContent = dir === "venstre" ? "⟵ Venstre" : "Højre ⟶";
+        counts[dir]++;
+        await say(dir);
+        if (!alive()) return;
+
+        await wait(rand(TO_BACK_MIN, TO_BACK_MAX));
+        if (!alive()) return;
+
+        commandEl.textContent = "Tilbage";
+        await say("tilbage");
+        if (!alive()) return;
+
+        const pause = rand(TO_NEXT_MIN, TO_NEXT_MAX);
+        // Don't start a new command that can't finish before the round ends
+        if (timeLeft() < pause + TO_BACK_MIN + 1500) {
+          await wait(Math.max(0, timeLeft()));
+          if (alive()) finish(true);
+          return;
+        }
+        commandEl.textContent = "";
+        await wait(pause);
+      }
+    }
+
+    function tick() {
+      const secs = Math.max(0, Math.ceil(timeLeft() / 1000));
+      timerEl.textContent = secs;
+      if (secs === 0) finish(true);
+    }
+
+    function start() {
+      running = true;
+      session++;
+      counts = { venstre: 0, højre: 0 };
+      endTime = Date.now() + ROUND_SECONDS * 1000;
+      button.textContent = "Stop";
+      button.classList.add("stop");
+      statsEl.textContent = "";
+      timerEl.textContent = ROUND_SECONDS;
+      tickHandle = setInterval(tick, 200);
+      speechSynthesis.cancel();
+      loop();
+    }
+
+    function finish(completed) {
+      if (!alive()) return;
+      running = false;
+      clearInterval(tickHandle);
+      clearTimeout(waitHandle);
+      speechSynthesis.cancel();
+      button.textContent = "Start igen";
+      button.classList.remove("stop");
+      commandEl.textContent = completed ? "Færdig!" : "";
+      if (!completed) timerEl.textContent = ROUND_SECONDS;
+      statsEl.textContent = `Venstre: ${counts.venstre} · Højre: ${counts.højre}`;
+      if (completed) say("færdig");
+    }
+
+    button.addEventListener("click", () => running ? finish(false) : start());
+  </script>
+</body>
+</html>
