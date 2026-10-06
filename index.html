@@ -72,6 +72,11 @@
       cursor: pointer;
     }
     button.stop { background: var(--muted); }
+    .tempo { margin-top: 24px; text-align: left; }
+    .tempo label { display: flex; justify-content: space-between; font-size: 0.95rem; color: var(--muted); }
+    .tempo output { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .tempo input { width: 100%; margin: 10px 0 0; accent-color: var(--accent); }
+    .tempo .scale { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); }
     .stats { margin-top: 16px; color: var(--muted); font-size: 0.9rem; min-height: 1.2em; }
     .warn { margin-top: 16px; color: var(--accent); font-size: 0.85rem; }
   </style>
@@ -83,6 +88,11 @@
     <div class="timer" id="timer">60</div>
     <div class="command" id="command"></div>
     <button id="toggle">Start</button>
+    <div class="tempo">
+      <label for="tempo">Tempo <output id="tempoValue">1.0×</output></label>
+      <input type="range" id="tempo" min="0.5" max="2" step="0.1" value="1">
+      <div class="scale"><span>Langsom</span><span>Hurtig</span></div>
+    </div>
     <div class="stats" id="stats"></div>
     <div class="warn" id="warn" hidden></div>
   </main>
@@ -97,12 +107,15 @@
     const TO_BACK_MIN = 250, TO_BACK_MAX = 700;
     // Pause between "tilbage" and the next direction (ms)
     const TO_NEXT_MIN = 350, TO_NEXT_MAX = 1000;
+    const BASE_SPEECH_RATE = 1.3;
 
     const timerEl = document.getElementById("timer");
     const commandEl = document.getElementById("command");
     const button = document.getElementById("toggle");
     const statsEl = document.getElementById("stats");
     const warnEl = document.getElementById("warn");
+    const tempoEl = document.getElementById("tempo");
+    const tempoValueEl = document.getElementById("tempoValue");
     timerEl.textContent = ROUND_SECONDS;
     document.getElementById("sub").textContent = `Tilfældige kommandoer i ${ROUND_SECONDS} sekunder`;
 
@@ -114,6 +127,20 @@
     let restHandle = null;
     let counts = { venstre: 0, højre: 0 };
     let danishVoice = null;
+    let tempo = 1;
+
+    // Tempo divides the pauses; the voice speeds up more gently so words stay clear
+    function setTempo(value) {
+      tempo = Math.min(2, Math.max(0.5, Number(value) || 1));
+      tempoEl.value = tempo;
+      tempoValueEl.textContent = `${tempo.toFixed(1)}×`;
+    }
+    try { setTempo(localStorage.getItem("tempo") ?? 1); } catch { setTempo(1); }
+    tempoEl.addEventListener("input", () => {
+      setTempo(tempoEl.value);
+      try { localStorage.setItem("tempo", tempo); } catch {}
+    });
+    const pauseMs = (min, max) => rand(min, max) / tempo;
 
     function pickVoice() {
       const voices = speechSynthesis.getVoices();
@@ -144,7 +171,7 @@
         const u = new SpeechSynthesisUtterance(text);
         u.lang = "da-DK";
         if (danishVoice) u.voice = danishVoice;
-        u.rate = 1.3;
+        u.rate = BASE_SPEECH_RATE * Math.sqrt(tempo);
         u.onend = u.onerror = resolve;
         speechSynthesis.speak(u);
       });
@@ -162,16 +189,16 @@
         await say(dir);
         if (!alive()) return;
 
-        await wait(rand(TO_BACK_MIN, TO_BACK_MAX));
+        await wait(pauseMs(TO_BACK_MIN, TO_BACK_MAX));
         if (!alive()) return;
 
         commandEl.textContent = "Tilbage";
         await say("tilbage");
         if (!alive()) return;
 
-        const pause = rand(TO_NEXT_MIN, TO_NEXT_MAX);
+        const pause = pauseMs(TO_NEXT_MIN, TO_NEXT_MAX);
         // Don't start a new command that can't finish before the round ends
-        if (timeLeft() < pause + TO_BACK_MIN + 1500) {
+        if (timeLeft() < pause + TO_BACK_MIN / tempo + 1500) {
           await wait(Math.max(0, timeLeft()));
           if (alive()) finish(true);
           return;
