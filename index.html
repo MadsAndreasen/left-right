@@ -136,7 +136,7 @@
         const u = new SpeechSynthesisUtterance(text);
         u.lang = "da-DK";
         if (danishVoice) u.voice = danishVoice;
-        u.rate = 1;
+        u.rate = 1.3;
         u.onend = u.onerror = resolve;
         speechSynthesis.speak(u);
       });
