@@ -194,7 +194,7 @@
     }
 
     function finish(completed) {
-      if (!alive()) return;
+      if (!running) return;
       running = false;
       clearInterval(tickHandle);
       clearTimeout(waitHandle);
