@@ -60,6 +60,7 @@
       line-height: 1;
     }
     .timer.rest { color: var(--muted); }
+    .timer.countdown { color: var(--accent); }
     .command {
       height: 2.5rem;
       margin: 20px 0 28px;
@@ -241,18 +242,32 @@
       timerEl.classList.remove("rest");
     }
 
-    function start() {
+    const COUNTDOWN = [[3, "tre"], [2, "to"], [1, "en"]];
+
+    async function start() {
       stopRest();
       running = true;
-      session++;
+      const id = ++session;
+      const alive = () => running && id === session;
       counts = { venstre: 0, højre: 0 };
-      endTime = Date.now() + ROUND_SECONDS * 1000;
+      endTime = 0; // stays 0 until the countdown is over
       button.textContent = "Stop";
       button.classList.add("stop");
       statsEl.textContent = "";
+      speechSynthesis.cancel();
+
+      timerEl.classList.add("countdown");
+      commandEl.textContent = "Gør klar";
+      for (const [n, word] of COUNTDOWN) {
+        timerEl.textContent = n;
+        await Promise.all([say(word), wait(1000)]);
+        if (!alive()) return;
+      }
+      timerEl.classList.remove("countdown");
+
+      endTime = Date.now() + ROUND_SECONDS * 1000;
       timerEl.textContent = ROUND_SECONDS;
       tickHandle = setInterval(tick, 200);
-      speechSynthesis.cancel();
       loop();
     }
 
@@ -262,9 +277,10 @@
       clearInterval(tickHandle);
       clearTimeout(waitHandle);
       speechSynthesis.cancel();
+      timerEl.classList.remove("countdown");
       button.textContent = "Start igen";
       button.classList.remove("stop");
-      statsEl.textContent = `Venstre: ${counts.venstre} · Højre: ${counts.højre}`;
+      if (endTime) statsEl.textContent = `Venstre: ${counts.venstre} · Højre: ${counts.højre}`;
       if (completed) {
         startRest();
         say("færdig");

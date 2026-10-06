@@ -3,7 +3,8 @@
 A single page that calls out random Danish directions in 60-second rounds:
 "venstre … tilbage", "højre … tilbage", with random pauses in between.
 
-Open `index.html` in a browser and press **Start**. Speech uses the browser's
+Open `index.html` in a browser and press **Start**. A spoken 3-2-1 countdown
+("tre, to, en") runs before each round. Speech uses the browser's
 built-in text-to-speech with a Danish (`da-DK`) voice. If the device has no
 Danish voice installed, the page shows a warning.
 
