@@ -8,5 +8,5 @@ built-in text-to-speech with a Danish (`da-DK`) voice. If the device has no
 Danish voice installed, the page shows a warning.
 
 Timing (edit the constants at the top of the script to tune):
-- direction → "tilbage": 0.8–2.0 s
-- "tilbage" → next direction: 1.2–3.2 s
+- direction → "tilbage": 0.5–1.3 s
+- "tilbage" → next direction: 0.7–1.8 s
