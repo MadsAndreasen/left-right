@@ -10,3 +10,6 @@ Danish voice installed, the page shows a warning.
 Timing (edit the constants at the top of the script to tune):
 - direction → "tilbage": 0.25–0.7 s
 - "tilbage" → next direction: 0.35–1.0 s
+
+For a quick test, set the round length in the URL, e.g. `?seconds=10`:
+https://madsandreasen.github.io/left-right/?seconds=10
