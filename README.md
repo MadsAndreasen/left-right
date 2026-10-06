@@ -17,3 +17,13 @@ Base timing at 1.0× (edit the constants at the top of the script to tune):
 
 For a quick test, set the round length in the URL, e.g. `?seconds=10`:
 https://madsandreasen.github.io/left-right/?seconds=10
+
+## Install as an app
+
+The page is a PWA (manifest + service worker), so it can be installed and works
+offline:
+- **Android / Chrome:** menu → *Install app* (or *Add to Home screen*).
+- **iPhone / Safari:** Share → *Add to Home Screen*.
+
+The service worker fetches the newest version whenever online and falls back to
+the cached copy offline.
