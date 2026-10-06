@@ -35,6 +35,7 @@
       margin: 0;
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       background: var(--bg);
@@ -87,6 +88,8 @@
     .tempo .scale { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); }
     .stats { margin-top: 16px; color: var(--muted); font-size: 0.9rem; min-height: 1.2em; }
     .warn { margin-top: 16px; color: var(--accent); font-size: 0.85rem; }
+    footer { margin-top: 16px; color: var(--muted); font-size: 0.8rem; text-align: center; }
+    footer a { color: inherit; }
   </style>
 </head>
 <body>
@@ -104,6 +107,9 @@
     <div class="stats" id="stats"></div>
     <div class="warn" id="warn" hidden></div>
   </main>
+  <footer>
+    Version 1.0.0 · <a href="mailto:app@andreasen.cc">app@andreasen.cc</a>
+  </footer>
 
   <script>
     // Round length; override with ?seconds=10 for quick testing
