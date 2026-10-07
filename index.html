@@ -108,7 +108,7 @@
     <div class="warn" id="warn" hidden></div>
   </main>
   <footer>
-    Version 1.0.0 · <a href="mailto:app@andreasen.cc">app@andreasen.cc</a>
+    Version 1.1.0 · <a href="mailto:app@andreasen.cc">app@andreasen.cc</a>
   </footer>
 
   <script>
@@ -296,7 +296,26 @@
       }
     }
 
-    button.addEventListener("click", () => running ? finish(false) : start());
+    // Keep the screen awake once a session has started (rounds and rest).
+    // The browser drops the lock when the app is hidden, so take it again on return.
+    let wakeLock = null;
+    let wantWakeLock = false;
+    async function requestWakeLock() {
+      if (!("wakeLock" in navigator) || wakeLock || document.visibilityState !== "visible") return;
+      try {
+        wakeLock = await navigator.wakeLock.request("screen");
+        wakeLock.addEventListener("release", () => { wakeLock = null; });
+      } catch {}
+    }
+    document.addEventListener("visibilitychange", () => {
+      if (wantWakeLock) requestWakeLock();
+    });
+
+    button.addEventListener("click", () => {
+      wantWakeLock = true;
+      requestWakeLock();
+      running ? finish(false) : start();
+    });
 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("sw.js").catch(() => {});
