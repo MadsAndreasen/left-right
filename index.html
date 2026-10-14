@@ -108,7 +108,7 @@
     <div class="warn" id="warn" hidden></div>
   </main>
   <footer>
-    Version 1.2.0 · <a href="mailto:app@andreasen.cc">app@andreasen.cc</a>
+    Version 1.3.0 · <a href="mailto:app@andreasen.cc">app@andreasen.cc</a>
   </footer>
 
   <script>
@@ -141,6 +141,7 @@
     let restHandle = null;
     let counts = { venstre: 0, højre: 0 };
     let danishVoice = null;
+    let allAudioLoaded = false; // recordings cover every word, so the device voice isn't needed
     let tempo = 1;
 
     // Tempo only scales the pauses; the voice always speaks at SPEECH_RATE
@@ -159,7 +160,7 @@
     function pickVoice() {
       const voices = speechSynthesis.getVoices();
       danishVoice = voices.find(v => v.lang.toLowerCase().replace("_", "-").startsWith("da")) || null;
-      if (voices.length && !danishVoice) {
+      if (voices.length && !danishVoice && !allAudioLoaded) {
         warnEl.hidden = false;
         warnEl.textContent = "Ingen dansk stemme fundet på denne enhed – udtalen kan lyde forkert.";
       }
@@ -180,7 +181,67 @@
       return new Promise(resolve => { waitHandle = setTimeout(resolve, ms); });
     }
 
+    // Recorded words (audio/*.mp3). Any word without a file falls back to the device voice.
+    const AUDIO_FILES = {
+      "venstre": "audio/venstre.mp3",
+      "højre": "audio/hoejre.mp3",
+      "tilbage": "audio/tilbage.mp3",
+      "tre": "audio/tre.mp3",
+      "to": "audio/to.mp3",
+      "en": "audio/en.mp3",
+      "færdig": "audio/faerdig.mp3",
+    };
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = AudioCtx ? new AudioCtx() : null;
+    const buffers = {};
+    let currentSource = null;
+
+    // Play recordings even when an iPhone's silent switch is on
+    if (navigator.audioSession) {
+      try { navigator.audioSession.type = "playback"; } catch {}
+    }
+
+    async function loadAudio() {
+      if (!audioCtx) return;
+      await Promise.all(Object.entries(AUDIO_FILES).map(async ([word, url]) => {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) return;
+          const data = await res.arrayBuffer();
+          buffers[word] = await new Promise((ok, fail) => audioCtx.decodeAudioData(data, ok, fail));
+        } catch {}
+      }));
+      if (Object.keys(buffers).length === Object.keys(AUDIO_FILES).length) {
+        allAudioLoaded = true;
+        warnEl.hidden = true;
+      }
+    }
+    loadAudio();
+
+    function playBuffer(buffer) {
+      return new Promise(resolve => {
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(audioCtx.destination);
+        src.onended = () => {
+          if (currentSource === src) currentSource = null;
+          resolve();
+        };
+        currentSource = src;
+        src.start();
+      });
+    }
+
+    function stopAudio() {
+      speechSynthesis.cancel();
+      if (currentSource) {
+        try { currentSource.stop(); } catch {}
+        currentSource = null;
+      }
+    }
+
     function say(text) {
+      if (buffers[text]) return playBuffer(buffers[text]);
       return new Promise(resolve => {
         const u = new SpeechSynthesisUtterance(text);
         u.lang = "da-DK";
@@ -260,7 +321,7 @@
       button.textContent = "Stop";
       button.classList.add("stop");
       statsEl.textContent = "";
-      speechSynthesis.cancel();
+      stopAudio();
 
       timerEl.classList.add("countdown");
       commandEl.textContent = "Gør klar";
@@ -282,7 +343,7 @@
       running = false;
       clearInterval(tickHandle);
       clearTimeout(waitHandle);
-      speechSynthesis.cancel();
+      stopAudio();
       timerEl.classList.remove("countdown");
       button.textContent = "Start igen";
       button.classList.remove("stop");
@@ -312,6 +373,8 @@
     });
 
     button.addEventListener("click", () => {
+      // Audio can only start after a tap, so unlock it here
+      if (audioCtx && audioCtx.state !== "running") audioCtx.resume();
       wantWakeLock = true;
       requestWakeLock();
       running ? finish(false) : start();

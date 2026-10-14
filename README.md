@@ -27,3 +27,9 @@ offline:
 
 The service worker fetches the newest version whenever online and falls back to
 the cached copy offline.
+
+## Recorded voice
+
+If `audio/` contains recordings, the app plays them instead of the device
+voice (any missing word falls back to the device voice):
+`venstre.mp3`, `hoejre.mp3`, `tilbage.mp3`, `tre.mp3`, `to.mp3`, `en.mp3`, `faerdig.mp3`.
