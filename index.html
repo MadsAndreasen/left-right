@@ -105,10 +105,11 @@
       <div class="scale"><span>Langsom</span><span>Hurtig</span></div>
     </div>
     <div class="stats" id="stats"></div>
+    <div class="stats" id="rounds" hidden></div>
     <div class="warn" id="warn" hidden></div>
   </main>
   <footer>
-    Version 1.3.0 · <a href="mailto:app@andreasen.cc">app@andreasen.cc</a>
+    Version 1.4.0 · <a href="mailto:app@andreasen.cc">app@andreasen.cc</a>
   </footer>
 
   <script>
@@ -127,6 +128,7 @@
     const commandEl = document.getElementById("command");
     const button = document.getElementById("toggle");
     const statsEl = document.getElementById("stats");
+    const roundsEl = document.getElementById("rounds");
     const warnEl = document.getElementById("warn");
     const tempoEl = document.getElementById("tempo");
     const tempoValueEl = document.getElementById("tempoValue");
@@ -140,6 +142,7 @@
     let waitHandle = null;
     let restHandle = null;
     let counts = { venstre: 0, højre: 0 };
+    let roundsCompleted = 0; // in memory only, so it resets when the page is reloaded
     let danishVoice = null;
     let allAudioLoaded = false; // recordings cover every word, so the device voice isn't needed
     let tempo = 1;
@@ -349,6 +352,9 @@
       button.classList.remove("stop");
       if (endTime) statsEl.textContent = `Venstre: ${counts.venstre} · Højre: ${counts.højre}`;
       if (completed) {
+        roundsCompleted++;
+        roundsEl.hidden = false;
+        roundsEl.textContent = `Runder i denne session: ${roundsCompleted}`;
         startRest();
         say("færdig");
       } else {
