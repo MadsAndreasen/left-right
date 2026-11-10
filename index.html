@@ -109,7 +109,7 @@
     <div class="warn" id="warn" hidden></div>
   </main>
   <footer>
-    Version 1.5.0 · <a href="mailto:app@andreasen.cc">app@andreasen.cc</a>
+    Version 1.6.0 · <a href="mailto:app@andreasen.cc">app@andreasen.cc</a>
   </footer>
 
   <script>
@@ -353,6 +353,7 @@
       if (endTime) statsEl.textContent = `Venstre: ${counts.venstre} · Højre: ${counts.højre}`;
       if (completed) {
         roundsCompleted++;
+        trackRound();
         roundsEl.hidden = false;
         roundsEl.textContent = `Runder i denne session: ${roundsCompleted}`;
         startRest();
@@ -387,6 +388,19 @@
       requestWakeLock();
       running ? finish(false) : start();
     });
+
+    // Usage stats via GoatCounter (no cookies). Set the site code to turn it on.
+    const GOATCOUNTER_CODE = "";
+    if (GOATCOUNTER_CODE) {
+      const gc = document.createElement("script");
+      gc.async = true;
+      gc.src = "https://gc.zgo.at/count.js";
+      gc.dataset.goatcounter = `https://${GOATCOUNTER_CODE}.goatcounter.com/count`;
+      document.head.appendChild(gc);
+    }
+    function trackRound() {
+      try { window.goatcounter?.count({ path: "round-completed", title: "Runde færdig", event: true }); } catch {}
+    }
 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("sw.js").catch(() => {});

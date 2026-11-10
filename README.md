@@ -36,3 +36,9 @@ voice (any missing word falls back to the device voice):
 
 At the end of each round the app says "færdig" followed by the round number,
 e.g. "færdig … runde 3". The round number is always spoken by the device voice.
+
+## Usage stats
+
+Visits and completed rounds can be counted with [GoatCounter](https://www.goatcounter.com)
+(free, no cookies). Set `GOATCOUNTER_CODE` near the bottom of `index.html` to your
+site code; leave it empty to turn counting off.
