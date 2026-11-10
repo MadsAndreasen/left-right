@@ -33,3 +33,6 @@ the cached copy offline.
 If `audio/` contains recordings, the app plays them instead of the device
 voice (any missing word falls back to the device voice):
 `venstre.mp3`, `hoejre.mp3`, `tilbage.mp3`, `tre.mp3`, `to.mp3`, `en.mp3`, `faerdig.mp3`.
+
+At the end of each round the app says "færdig" followed by the round number,
+e.g. "færdig … runde 3". The round number is always spoken by the device voice.

@@ -109,7 +109,7 @@
     <div class="warn" id="warn" hidden></div>
   </main>
   <footer>
-    Version 1.4.0 · <a href="mailto:app@andreasen.cc">app@andreasen.cc</a>
+    Version 1.5.0 · <a href="mailto:app@andreasen.cc">app@andreasen.cc</a>
   </footer>
 
   <script>
@@ -356,7 +356,9 @@
         roundsEl.hidden = false;
         roundsEl.textContent = `Runder i denne session: ${roundsCompleted}`;
         startRest();
-        say("færdig");
+        // "Færdig, runde 3". The round number is always spoken by the device voice.
+        const round = roundsCompleted, id = session;
+        say("færdig").then(() => { if (!running && id === session) say(`runde ${round}`); });
       } else {
         commandEl.textContent = "";
         timerEl.textContent = ROUND_SECONDS;
